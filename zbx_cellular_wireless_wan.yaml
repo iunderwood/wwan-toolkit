@@ -1,0 +1,571 @@
+zabbix_export:
+  version: '7.2'
+  template_groups:
+    - uuid: 91fe291e8a5d4eba85730ca05f65b20a
+      name: Templates/Cellular
+  templates:
+    - uuid: 7a0aced0d7ff4371ad8280f35ab9e296
+      template: 'Cellular Wireless WAN'
+      name: 'Cellular Wireless WAN'
+      description: 'Cellular statictics from the wireless WAN, using {$WDS_DEVICE} to define which modem the information should be gathered from.'
+      vendor:
+        name: iunderwood
+        version: 2025-1019-1
+      groups:
+        - name: Templates/Cellular
+      items:
+        - uuid: 835f944f6e41438a81b83a96e0b4ea5a
+          name: 'NAS Band'
+          type: DEPENDENT
+          key: 'nas-get-rf-band-info.band[$WDS_DEVICE}]'
+          value_type: TEXT
+          description: 'LTE/5G Reported Band'
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - 'Active Band Class:.+''([a-z-0-9]+)'''
+                - \1
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - '86400'
+          master_item:
+            key: 'nas-get-rf-band-info.raw[{$WDS_DEVICE}]'
+          tags:
+            - tag: 5g
+              value: band-class
+        - uuid: f60226dd90f44d32a59a7f082b4a5610
+          name: 'NAS Channel'
+          type: DEPENDENT
+          key: 'nas-get-rf-band-info.channel[$WDS_DEVICE}]'
+          value_type: TEXT
+          description: EARFCN
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - 'Active Channel:.+''([0-9]+)'''
+                - \1
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - '86400'
+          master_item:
+            key: 'nas-get-rf-band-info.raw[{$WDS_DEVICE}]'
+          tags:
+            - tag: 5g
+              value: earfcn
+        - uuid: 566513dad27b41929543e7df6f731c12
+          name: 'Radio Interface'
+          type: DEPENDENT
+          key: 'nas-get-rf-band-info.radio[$WDS_DEVICE}]'
+          value_type: TEXT
+          description: 'Radio Interface'
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - 'Radio Interface:.+''([a-z-0-9]+)'''
+                - \1
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          master_item:
+            key: 'nas-get-rf-band-info.raw[{$WDS_DEVICE}]'
+          tags:
+            - tag: 5g
+              value: radio-interface
+        - uuid: 1a68f1b8f54f41bea1eaec6d5f850f2f
+          name: 'NAS Get RF Band Info'
+          key: 'nas-get-rf-band-info.raw[{$WDS_DEVICE}]'
+          history: 1h
+          value_type: TEXT
+          tags:
+            - tag: component
+              value: raw
+        - uuid: a992b6f4242e4b45b2b75ff46a9c9125
+          name: 'NAS Serving Carrier'
+          type: DEPENDENT
+          key: 'nas-get-serving-system.carrier[{$WDS_DEVICE}]'
+          value_type: CHAR
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - 'Description: ''(\S+)'''
+                - \1
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          master_item:
+            key: 'nas-get-serving-system.raw[{$WDS_DEVICE}]'
+          tags:
+            - tag: 5g
+              value: carrier-name
+        - uuid: 402549e963984cc6b14ebc6ca7160895
+          name: 'NAS Service Cell ID'
+          type: DEPENDENT
+          key: 'nas-get-serving-system.cellid[{$WDS_DEVICE}]'
+          value_type: TEXT
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - '.+3GPP cell ID: ''(\S+)'''
+                - \1
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          master_item:
+            key: 'nas-get-serving-system.raw[{$WDS_DEVICE}]'
+          tags:
+            - tag: 5g
+              value: cell-id
+        - uuid: 1bf547e1e85547359603c9553a195553
+          name: 'NAS Get Serving System'
+          key: 'nas-get-serving-system.raw[{$WDS_DEVICE}]'
+          history: 1h
+          value_type: TEXT
+          tags:
+            - tag: component
+              value: raw
+        - uuid: b38438f8dedf43d49191c675dc3f4a7a
+          name: 'NAS Get Signal Strength'
+          key: 'nas-get-signal-strength.raw[{$WDS_DEVICE}]'
+          history: 1h
+          value_type: TEXT
+          tags:
+            - tag: component
+              value: raw
+        - uuid: 4c1ac523bf8e4794927fc7a0a19a78cd
+          name: 'Signal RSRP'
+          type: DEPENDENT
+          key: 'nas-get-signal-strength.rsrp[{$WDS_DEVICE}]'
+          value_type: FLOAT
+          units: dBm
+          description: 'Reference Signal Received Power'
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - 'RSRP:\n\sNetwork.+''(\S+)''.+''([-0-9.]+).+'''
+                - \2
+          master_item:
+            key: 'nas-get-signal-strength.raw[{$WDS_DEVICE}]'
+          tags:
+            - tag: component
+              value: rf
+        - uuid: bbd9667c93fd4ab1ba8157594e791f0e
+          name: 'Signal RSRQ - Average / 5m'
+          type: CALCULATED
+          key: 'nas-get-signal-strength.rsrq.avg[{$WDS_DEVICE}]'
+          value_type: FLOAT
+          units: dBm
+          params: 'avg(//nas-get-signal-strength.rsrq[{$WDS_DEVICE}],5m)'
+          tags:
+            - tag: component
+              value: rf
+        - uuid: e5f416014aa14b7ab8e746bf854c8c02
+          name: 'Signal RSRQ'
+          type: DEPENDENT
+          key: 'nas-get-signal-strength.rsrq[{$WDS_DEVICE}]'
+          value_type: FLOAT
+          units: dB
+          description: 'Reference Signal Received Quality'
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - 'RSRQ:\n\sNetwork.+''(\S+)''.+''([-0-9.]+).+'''
+                - \2
+          master_item:
+            key: 'nas-get-signal-strength.raw[{$WDS_DEVICE}]'
+          tags:
+            - tag: component
+              value: rf
+        - uuid: 93550d9dc34b4220a7f30238eb881dbd
+          name: 'Signal RSSI'
+          type: DEPENDENT
+          key: 'nas-get-signal-strength.rssi[{$WDS_DEVICE}]'
+          value_type: FLOAT
+          units: dBm
+          description: 'Received Signal Strength Indicator'
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - 'RSSI:\n\sNetwork.+''(\S+)''.+''([-0-9.]+).+'''
+                - \2
+          master_item:
+            key: 'nas-get-signal-strength.raw[{$WDS_DEVICE}]'
+          tags:
+            - tag: component
+              value: rf
+        - uuid: a5ab9b6cb63a46ecb5773a34fce7d95b
+          name: 'Signal SNR'
+          type: DEPENDENT
+          key: 'nas-get-signal-strength.snr[{$WDS_DEVICE}]'
+          value_type: FLOAT
+          units: dB
+          description: 'Signal-to-Noise Ratio'
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - 'SNR:\n\sNetwork.+''(\S+)''.+''([-0-9.]+).+'''
+                - \2
+          master_item:
+            key: 'nas-get-signal-strength.raw[{$WDS_DEVICE}]'
+          tags:
+            - tag: component
+              value: rf
+        - uuid: 1a212762957e45c4976eb6b6bf3a1134
+          name: 'Wireless WAN IP'
+          key: wwan.addr
+          value_type: CHAR
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - .+now\s(\d+.\d+.\d+.\d+)
+                - \1
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1d
+          tags:
+            - tag: component
+              value: network
+      tags:
+        - tag: component
+          value: cellular
+      macros:
+        - macro: '{$WDS_DEVICE}'
+          value: /dev/cdc-wdm0
+          description: 'Modem Device ID'
+      dashboards:
+        - uuid: a8345ff93de94f9490cb7e821807439a
+          name: 'Cellular Information'
+          pages:
+            - widgets:
+                - type: svggraph
+                  name: 'Received Signal Indicators'
+                  width: '36'
+                  height: '6'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 00FF00
+                    - type: INTEGER
+                      name: ds.0.fill
+                      value: '0'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Signal RSSI'
+                    - type: STRING
+                      name: ds.0.items.1
+                      value: 'Signal RSRP'
+                    - type: STRING
+                      name: ds.0.items.2
+                      value: 'Signal RSRQ'
+                    - type: INTEGER
+                      name: ds.0.width
+                      value: '2'
+                    - type: STRING
+                      name: ds.1.color
+                      value: FF465C
+                    - type: INTEGER
+                      name: ds.1.fill
+                      value: '0'
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'Signal RSRQ - Average / 5m'
+                    - type: INTEGER
+                      name: ds.1.transparency
+                      value: '2'
+                    - type: INTEGER
+                      name: ds.1.width
+                      value: '2'
+                    - type: STRING
+                      name: reference
+                      value: LORXP
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: gauge
+                  name: 'RSRQ - Ref. Sig. Receive Quality (Avg 5m)'
+                  'y': '6'
+                  width: '16'
+                  height: '3'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_places
+                      value: '1'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Cellular Wireless WAN'
+                        key: 'nas-get-signal-strength.rsrq.avg[{$WDS_DEVICE}]'
+                    - type: STRING
+                      name: max
+                      value: '0'
+                    - type: STRING
+                      name: min
+                      value: '-20'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: INTEGER
+                      name: show.2
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: B71C1C
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '-20'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: E65100
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '-12'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: 9E9D24
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '-9'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: 558B2F
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '-4'
+                    - type: INTEGER
+                      name: th_show_arc
+                      value: '1'
+                - type: gauge
+                  name: 'RSRP - Ref. Sig. Received Power'
+                  x: '16'
+                  'y': '6'
+                  width: '16'
+                  height: '3'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Cellular Wireless WAN'
+                        key: 'nas-get-signal-strength.rsrp[{$WDS_DEVICE}]'
+                    - type: STRING
+                      name: max
+                      value: '-44'
+                    - type: STRING
+                      name: min
+                      value: '-125'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: INTEGER
+                      name: show.2
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: D84315
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '-125'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: F9A825
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '-111'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: 9E9D24
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '-102'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: 558B2F
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '-84'
+                    - type: INTEGER
+                      name: th_show_arc
+                      value: '1'
+                - type: gauge
+                  name: 'RSSI - Rcv. Sig. Strength Indicator'
+                  x: '32'
+                  'y': '6'
+                  width: '16'
+                  height: '3'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Cellular Wireless WAN'
+                        key: 'nas-get-signal-strength.rssi[{$WDS_DEVICE}]'
+                    - type: STRING
+                      name: max
+                      value: '-30'
+                    - type: STRING
+                      name: min
+                      value: '-120'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                    - type: INTEGER
+                      name: show.2
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: D84315
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '-120'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: F9A825
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '-85'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: 9E9D24
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '-75'
+                    - type: STRING
+                      name: thresholds.3.color
+                      value: 558B2F
+                    - type: STRING
+                      name: thresholds.3.threshold
+                      value: '-65'
+                    - type: INTEGER
+                      name: th_show_arc
+                      value: '1'
+                - type: item
+                  x: '36'
+                  width: '14'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Cellular Wireless WAN'
+                        key: wwan.addr
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '4'
+                - type: svggraph
+                  name: 'Signal-To-Noise Ratio'
+                  x: '36'
+                  'y': '2'
+                  width: '36'
+                  height: '4'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: FFD54F
+                    - type: STRING
+                      name: ds.0.data_set_label
+                      value: 'SNR Average'
+                    - type: INTEGER
+                      name: ds.0.fill
+                      value: '0'
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Signal SNR'
+                    - type: INTEGER
+                      name: ds.0.width
+                      value: '2'
+                    - type: STRING
+                      name: reference
+                      value: GZIUK
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: problemsbysv
+                  x: '48'
+                  'y': '6'
+                  width: '24'
+                  height: '1'
+                  hide_header: 'YES'
+                  fields:
+                    - type: STRING
+                      name: reference
+                      value: QOHOG
+                    - type: INTEGER
+                      name: severities.0
+                      value: '0'
+                    - type: INTEGER
+                      name: severities.1
+                      value: '1'
+                    - type: INTEGER
+                      name: severities.2
+                      value: '2'
+                    - type: INTEGER
+                      name: severities.3
+                      value: '3'
+                    - type: INTEGER
+                      name: severities.4
+                      value: '4'
+                    - type: INTEGER
+                      name: severities.5
+                      value: '5'
+                - type: item
+                  name: 'Band Class'
+                  x: '48'
+                  'y': '7'
+                  width: '14'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Cellular Wireless WAN'
+                        key: 'nas-get-rf-band-info.band[$WDS_DEVICE}]'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                - type: item
+                  name: Carrier
+                  x: '50'
+                  width: '12'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Cellular Wireless WAN'
+                        key: 'nas-get-serving-system.carrier[{$WDS_DEVICE}]'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                - type: item
+                  name: 'Cell ID'
+                  x: '62'
+                  width: '10'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Cellular Wireless WAN'
+                        key: 'nas-get-serving-system.cellid[{$WDS_DEVICE}]'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                - type: item
+                  name: Channel
+                  x: '62'
+                  'y': '7'
+                  width: '10'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'Cellular Wireless WAN'
+                        key: 'nas-get-rf-band-info.channel[$WDS_DEVICE}]'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
